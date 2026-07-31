@@ -1,0 +1,16 @@
+{
+  "name": "discord-stream-schedule-builder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Build timezone-aware Discord stream schedule messages.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test",
+    "build": "node scripts/build.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
