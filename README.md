@@ -26,9 +26,9 @@ npm test
 npm run build
 ```
 
-The build creates the static GitHub Pages artifact in `dist/`. The included GitHub Actions workflow tests, builds, and deploys the site when the repository's `main` branch is pushed. GitHub Pages must be configured to use **GitHub Actions** as its source.
+The build creates the static GitHub Pages artifact in `dist/`. The included GitHub Actions workflow tests, builds, and deploys the site when the repository's `main` branch is pushed.
 
-This project has not been deployed or connected to a remote repository. The Pages copy is static, so its **Post to Discord** button remains disabled; copy-to-clipboard still works normally.
+The Pages copy is static, so its **Post to Discord** button remains disabled; copy-to-clipboard still works normally.
 
 ## Optional Discord webhook
 
@@ -53,4 +53,4 @@ During the spring daylight-saving gap, nonexistent times such as 2:30 AM are rej
 
 Templates are saved only in the browser's local storage on the current device. The selected date is not saved, so loading a template always targets tomorrow. Limits are 20 schedule rows, 100 characters per event, 240 characters for the announcement, and Discord's 2,000-character message maximum.
 
-There is no authentication in this version. Keep the Pages repository and URL private if the schedule details themselves are sensitive; GitHub Pages access depends on the repository and account plan.
+There is no authentication in this version. The public Pages URL is accessible to anyone who knows or discovers it, but schedules and templates remain in each browser's local storage and are never uploaded.
