@@ -8,3 +8,18 @@ coverage/
 npm-debug.log*
 .DS_Store
 secrets/
+
+# Local Codex guidance and history are never public repository content.
+AGENTS.md
+AGENTS.override.md
+MAINTENANCE.md
+SETTLED_HISTORY.md
+**/AGENTS.md
+**/AGENTS.override.md
+**/MAINTENANCE.md
+**/SETTLED_HISTORY.md
+.codex-project-root
+.codex/
+.codex-*/
+**/.codex/
+**/.codex-*/
