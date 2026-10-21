@@ -1,71 +1,31 @@
-export const TIME_ZONE = "America/Los_Angeles";
+export const TIME_ZONE = "UTC";
 export const MAX_ROWS = 20;
 export const MAX_MESSAGE_LENGTH = 2000;
 export const MAX_EVENT_LENGTH = 100;
 export const MAX_ANNOUNCEMENT_LENGTH = 240;
 
-const localFormatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: TIME_ZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  hourCycle: "h23"
-});
-
-function partsAt(milliseconds) {
-  const parts = Object.fromEntries(
-    localFormatter
-      .formatToParts(new Date(milliseconds))
-      .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, Number(part.value)])
-  );
-  return parts;
-}
-
-function sameLocal(parts, wanted) {
-  return ["year", "month", "day", "hour", "minute"].every(
-    (key) => parts[key] === wanted[key]
-  );
-}
-
-export function pacificDateTimeToUnix(date, time) {
+export function utcDateTimeToUnix(date, time) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
     throw new RangeError("Enter a valid date and time.");
   }
 
   const [year, month, day] = date.split("-").map(Number);
   const [hour, minute] = time.split(":").map(Number);
-  const wanted = { year, month, day, hour, minute };
-  const naiveUtc = Date.UTC(year, month - 1, day, hour, minute);
-  const matches = [];
-
-  // Search the complete range of real-world UTC offsets. This resolves PST/PDT
-  // without assuming either offset and lets us detect skipped DST wall times.
-  for (let offsetMinutes = -14 * 60; offsetMinutes <= 14 * 60; offsetMinutes += 15) {
-    const candidate = naiveUtc - offsetMinutes * 60_000;
-    if (sameLocal(partsAt(candidate), wanted)) matches.push(candidate);
+  const instant = new Date(0);
+  instant.setUTCFullYear(year, month - 1, day);
+  instant.setUTCHours(hour, minute, 0, 0);
+  if (
+    instant.getUTCFullYear() !== year || instant.getUTCMonth() !== month - 1 ||
+    instant.getUTCDate() !== day || instant.getUTCHours() !== hour ||
+    instant.getUTCMinutes() !== minute
+  ) {
+    throw new RangeError("Enter a valid UTC date and time.");
   }
-
-  if (matches.length === 0) {
-    throw new RangeError("That Pacific time does not exist because of daylight saving time.");
-  }
-
-  // A fall-back hour occurs twice. Choose the first occurrence consistently.
-  return Math.min(...matches) / 1000;
+  return instant.getTime() / 1000;
 }
 
-export function tomorrowInPacific(now = new Date()) {
-  const todayParts = partsAt(now.getTime());
-  const noonUtc = Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day, 12);
-  const tomorrow = new Date(noonUtc + 86_400_000);
-  return [
-    tomorrow.getUTCFullYear(),
-    String(tomorrow.getUTCMonth() + 1).padStart(2, "0"),
-    String(tomorrow.getUTCDate()).padStart(2, "0")
-  ].join("-");
+export function tomorrowInUTC(now = new Date()) {
+  return new Date(now.getTime() + 86_400_000).toISOString().slice(0, 10);
 }
 
 export function formatScheduleDate(date) {
@@ -95,7 +55,7 @@ export function validateSchedule(schedule) {
       return;
     }
     try {
-      const timestamp = pacificDateTimeToUnix(schedule.date, row.time);
+      const timestamp = utcDateTimeToUnix(schedule.date, row.time);
       if (seenTimes.has(timestamp)) warnings.push(`${label} has a duplicate start time.`);
       if (previousTimestamp !== null && timestamp < previousTimestamp) {
         warnings.push(`${label} is out of chronological order.`);
@@ -109,7 +69,7 @@ export function validateSchedule(schedule) {
 
   if (schedule.endTime) {
     try {
-      const endTimestamp = pacificDateTimeToUnix(schedule.date, schedule.endTime);
+      const endTimestamp = utcDateTimeToUnix(schedule.date, schedule.endTime);
       if (seenTimes.has(endTimestamp)) warnings.push("End has a duplicate time.");
       if (previousTimestamp !== null && endTimestamp < previousTimestamp) {
         warnings.push("End is earlier than the final event.");
@@ -133,13 +93,13 @@ export function buildDiscordMessage(schedule) {
   for (const row of rows) {
     const name = cleanSingleLine(row.name, MAX_EVENT_LENGTH);
     if (!name || !row.time) continue;
-    const timestamp = pacificDateTimeToUnix(schedule.date, row.time);
+    const timestamp = utcDateTimeToUnix(schedule.date, row.time);
     const line = `${name} @ <t:${timestamp}:t>`;
     lines.push(row.bold ? `**${line}**` : line);
   }
 
   if (schedule.endTime) {
-    const timestamp = pacificDateTimeToUnix(schedule.date, schedule.endTime);
+    const timestamp = utcDateTimeToUnix(schedule.date, schedule.endTime);
     lines.push(`End @ <t:${timestamp}:t>`);
   }
 

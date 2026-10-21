@@ -423,7 +423,7 @@ pre {
 
   h1 { font-size: 22px; }
   h1 br { display: block; }
-  .timezone-chip { padding: 7px; font-size: 0; }
+  .timezone-chip { padding: 7px; font-size: 12px; }
   .output-column { grid-template-columns: 1fr; }
   .editor-panel,
   .preview-panel,
