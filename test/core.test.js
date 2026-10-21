@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {
   buildDiscordMessage,
   cleanSingleLine,
-  pacificDateTimeToUnix,
+  tomorrowInUTC,
+  utcDateTimeToUnix,
   validateSchedule,
   validateServerPayload
 } from "../public/core.js";
@@ -19,36 +20,27 @@ const base = {
   endTime: "17:00"
 };
 
-test("known PDT example converts to Unix seconds", () => {
-  assert.equal(pacificDateTimeToUnix("2026-07-31", "09:00"), 1785513600);
+test("UTC wall time converts directly to Unix seconds", () => {
+  assert.equal(utcDateTimeToUnix("2026-07-31", "09:00"), 1785488400);
 });
 
-test("winter PST date uses the correct offset", () => {
-  assert.equal(
-    pacificDateTimeToUnix("2026-01-15", "09:00"),
-    Date.parse("2026-01-15T17:00:00Z") / 1000
-  );
+test("UTC times remain valid through Pacific DST transitions", () => {
+  assert.equal(utcDateTimeToUnix("2026-03-08", "02:30"), Date.parse("2026-03-08T02:30:00Z") / 1000);
+  assert.equal(utcDateTimeToUnix("2026-11-01", "01:30"), Date.parse("2026-11-01T01:30:00Z") / 1000);
 });
 
-test("summer PDT date uses the correct offset", () => {
-  assert.equal(
-    pacificDateTimeToUnix("2026-07-15", "09:00"),
-    Date.parse("2026-07-15T16:00:00Z") / 1000
-  );
+test("UTC tomorrow follows the UTC calendar across local-day boundaries", () => {
+  assert.equal(tomorrowInUTC(new Date("2026-10-21T23:59:00Z")), "2026-10-22");
+  assert.equal(tomorrowInUTC(new Date("2026-10-22T00:01:00Z")), "2026-10-23");
 });
 
-test("spring DST gap rejects a nonexistent Pacific wall time", () => {
-  assert.throws(
-    () => pacificDateTimeToUnix("2026-03-08", "02:30"),
-    /does not exist because of daylight saving time/
-  );
-});
-
-test("fall DST overlap chooses the first occurrence consistently", () => {
-  assert.equal(
-    pacificDateTimeToUnix("2026-11-01", "01:30"),
-    Date.parse("2026-11-01T08:30:00Z") / 1000
-  );
+test("invalid UTC date and time inputs are rejected", () => {
+  for (const [date, time] of [
+    ["2026-02-30", "09:00"], ["2026-07-31", "24:00"], ["2026-07-31", "09:60"]
+  ]) {
+    assert.throws(() => utcDateTimeToUnix(date, time), /valid UTC date and time/);
+  }
+  assert.equal(utcDateTimeToUnix("0099-01-01", "00:00"), Date.parse("0099-01-01T00:00:00Z") / 1000);
 });
 
 test("Discord message formats announcement, date, rows, bold, and end", () => {
@@ -58,9 +50,9 @@ test("Discord message formats announcement, date, rows, bold, and end", () => {
       "@everyone THE WEEKEND BEGINS FR THIS TIME",
       "",
       "🚨SCHEDULE 7/31/26🚨",
-      "Daily Yap @ <t:1785513600:t>",
-      "**RE5 CO-OP WITH FRIENDS @ <t:1785526200:t>**",
-      "End @ <t:1785542400:t>"
+      "Daily Yap @ <t:1785488400:t>",
+      "**RE5 CO-OP WITH FRIENDS @ <t:1785501000:t>**",
+      "End @ <t:1785517200:t>"
     ].join("\n")
   );
 });
@@ -74,7 +66,7 @@ test("user Markdown is preserved while line breaks are safely flattened", () => 
     endTime: ""
   };
   assert.match(buildDiscordMessage(schedule), /^\*\*Big\*\* night\n\n/);
-  assert.match(buildDiscordMessage(schedule), /_Finale_ `run` @ <t:1785513600:t>$/);
+  assert.match(buildDiscordMessage(schedule), /_Finale_ `run` @ <t:1785488400:t>$/);
   assert.equal(cleanSingleLine("<script>\nalert(1)", 100), "<script> alert(1)");
 });
 

@@ -2,18 +2,13 @@ import {
   MAX_ROWS,
   buildDiscordMessage,
   cleanSingleLine,
-  pacificDateTimeToUnix,
-  tomorrowInPacific,
+  utcDateTimeToUnix,
+  tomorrowInUTC,
   validateSchedule
 } from "./core.js";
 
-const STORAGE_KEY = "discord-scheduler-template-v1";
-const defaultRows = [
-  { name: "Daily Yap", time: "09:00", bold: false },
-  { name: "As Dusk Falls Ep. 4", time: "10:00", bold: false },
-  { name: "RE5 CO-OP WITH FRIENDS", time: "12:30", bold: true },
-  { name: "Pokemon Unbound", time: "15:00", bold: false }
-];
+const STORAGE_KEY = "discord-scheduler-template-utc-v1";
+const PACIFIC_STORAGE_KEY = "discord-scheduler-template-v1";
 
 const elements = {
   announcement: document.querySelector("#announcement"),
@@ -86,11 +81,10 @@ function readSchedule() {
   };
 }
 
-function formatPacificTime(time) {
+function formatUTCTime(time) {
   if (!time) return "—";
   const [hour, minute] = time.split(":").map(Number);
-  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" })
-    .format(new Date(2020, 0, 1, hour, minute));
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} UTC`;
 }
 
 function updateAddState() {
@@ -118,7 +112,7 @@ function renderPreview(schedule) {
     item.className = "preview-item";
     const time = document.createElement("span");
     time.className = "preview-time";
-    time.textContent = formatPacificTime(entry.time);
+    time.textContent = formatUTCTime(entry.time);
     const details = document.createElement("div");
     const name = document.createElement("span");
     name.className = "preview-name";
@@ -127,7 +121,7 @@ function renderPreview(schedule) {
     const timestamp = document.createElement("code");
     timestamp.className = "preview-stamp";
     try {
-      timestamp.textContent = `<t:${pacificDateTimeToUnix(schedule.date, entry.time)}:t>`;
+      timestamp.textContent = `<t:${utcDateTimeToUnix(schedule.date, entry.time)}:t>`;
     } catch (error) {
       timestamp.textContent = error.message;
     }
@@ -166,7 +160,7 @@ function render() {
   elements.raw.textContent = message;
   elements.characters.textContent = `${message.length.toLocaleString()} / 2,000`;
   elements.characters.classList.toggle("over", message.length > 2000);
-  elements.copy.disabled = !message || message.startsWith("Cannot generate");
+  elements.copy.disabled = !message || message.startsWith("Cannot generate") || warnings.length > 0;
   elements.post.disabled = !webhookConfigured || elements.copy.disabled || warnings.length > 0;
   renderPreview(schedule);
   updateAddState();
@@ -174,7 +168,7 @@ function render() {
 
 function applySchedule(schedule) {
   elements.announcement.value = cleanSingleLine(schedule.announcement, 240);
-  elements.date.value = /^\d{4}-\d{2}-\d{2}$/.test(schedule.date ?? "") ? schedule.date : tomorrowInPacific();
+  elements.date.value = /^\d{4}-\d{2}-\d{2}$/.test(schedule.date ?? "") ? schedule.date : tomorrowInUTC();
   elements.includeEveryone.checked = schedule.includeEveryone !== false;
   elements.endTime.value = /^\d{2}:\d{2}$/.test(schedule.endTime ?? "") ? schedule.endTime : "";
   elements.rows.replaceChildren();
@@ -204,8 +198,13 @@ elements.save.addEventListener("click", () => {
 elements.load.addEventListener("click", () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return showToast("No saved template yet");
-    applySchedule({ ...JSON.parse(saved), date: tomorrowInPacific() });
+    if (!saved) {
+      showToast(localStorage.getItem(PACIFIC_STORAGE_KEY)
+        ? "Old Pacific template remains saved; re-enter its times in UTC."
+        : "No saved UTC template yet");
+      return;
+    }
+    applySchedule({ ...JSON.parse(saved), date: tomorrowInUTC() });
     showToast("Template loaded for tomorrow");
   } catch {
     showToast("Saved template is invalid");
@@ -214,7 +213,7 @@ elements.load.addEventListener("click", () => {
 
 elements.clear.addEventListener("click", () => {
   if (!confirm("Clear the current schedule? Your saved template will stay available.")) return;
-  applySchedule({ announcement: "", date: tomorrowInPacific(), includeEveryone: false, rows: [{}], endTime: "" });
+  applySchedule({ announcement: "", date: tomorrowInUTC(), includeEveryone: false, rows: [{}], endTime: "" });
 });
 
 elements.copy.addEventListener("click", async () => {
@@ -262,10 +261,10 @@ async function checkWebhook() {
 }
 
 applySchedule({
-  announcement: elements.announcement.value,
-  date: tomorrowInPacific(),
-  includeEveryone: true,
-  rows: defaultRows,
-  endTime: "17:00"
+  announcement: "",
+  date: tomorrowInUTC(),
+  includeEveryone: false,
+  rows: [{}],
+  endTime: ""
 });
 checkWebhook();
