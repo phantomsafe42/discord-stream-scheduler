@@ -167,6 +167,12 @@ main {
   gap: 12px;
 }
 
+.timezone-note {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .field {
   display: grid;
   gap: 7px;

@@ -5,8 +5,8 @@ import {
   cleanSingleLine,
   formatEventName,
   rememberEventName,
-  tomorrowInUTC,
-  utcDateTimeToUnix,
+  tomorrowInHouston,
+  houstonDateTimeToUnix,
   validateSchedule,
   validateServerPayload
 } from "../public/core.js";
@@ -22,27 +22,51 @@ const base = {
   endTime: "17:00"
 };
 
-test("UTC wall time converts directly to Unix seconds", () => {
-  assert.equal(utcDateTimeToUnix("2026-07-31", "09:00"), 1785488400);
+test("Houston wall time converts to the correct Discord timestamp", () => {
+  assert.equal(houstonDateTimeToUnix("2026-10-22", "11:00"), Date.parse("2026-10-22T16:00:00Z") / 1000);
+  assert.equal(houstonDateTimeToUnix("2026-10-22", "12:00"), Date.parse("2026-10-22T17:00:00Z") / 1000);
+  assert.equal(houstonDateTimeToUnix("2026-10-22", "13:30"), Date.parse("2026-10-22T18:30:00Z") / 1000);
+  assert.equal(houstonDateTimeToUnix("2026-10-22", "15:00"), Date.parse("2026-10-22T20:00:00Z") / 1000);
 });
 
-test("UTC times remain valid through Pacific DST transitions", () => {
-  assert.equal(utcDateTimeToUnix("2026-03-08", "02:30"), Date.parse("2026-03-08T02:30:00Z") / 1000);
-  assert.equal(utcDateTimeToUnix("2026-11-01", "01:30"), Date.parse("2026-11-01T01:30:00Z") / 1000);
+test("October 22 screenshot schedule keeps the intended Houston times when pasted", () => {
+  const message = buildDiscordMessage({
+    announcement: "monkey business as usual",
+    date: "2026-10-22",
+    includeEveryone: true,
+    rows: [
+      { name: "Daily Yap", time: "11:00" },
+      { name: "Egglocke", episode: "20", time: "12:00" },
+      { name: "Wolverine", time: "13:30" }
+    ],
+    endTime: "15:00"
+  });
+  assert.equal(message, [
+    "@everyone monkey business as usual", "", "🚨SCHEDULE 10/22/26🚨",
+    "Daily Yap @ <t:1792684800:t>",
+    "Egglocke Ep. 20 @ <t:1792688400:t>",
+    "Wolverine @ <t:1792693800:t>",
+    "End @ <t:1792699200:t>"
+  ].join("\n"));
 });
 
-test("UTC tomorrow follows the UTC calendar across local-day boundaries", () => {
-  assert.equal(tomorrowInUTC(new Date("2026-10-21T23:59:00Z")), "2026-10-22");
-  assert.equal(tomorrowInUTC(new Date("2026-10-22T00:01:00Z")), "2026-10-23");
+test("Houston daylight-saving gaps are rejected and repeated times choose the first occurrence", () => {
+  assert.throws(() => houstonDateTimeToUnix("2026-03-08", "02:30"), /does not exist/);
+  assert.equal(houstonDateTimeToUnix("2026-11-01", "01:30"), Date.parse("2026-11-01T06:30:00Z") / 1000);
+  assert.equal(houstonDateTimeToUnix("2026-01-15", "09:00"), Date.parse("2026-01-15T15:00:00Z") / 1000);
 });
 
-test("invalid UTC date and time inputs are rejected", () => {
+test("Houston tomorrow follows the Houston calendar across local-day boundaries", () => {
+  assert.equal(tomorrowInHouston(new Date("2026-10-22T04:59:00Z")), "2026-10-22");
+  assert.equal(tomorrowInHouston(new Date("2026-10-22T05:01:00Z")), "2026-10-23");
+});
+
+test("invalid Houston date and time inputs are rejected", () => {
   for (const [date, time] of [
     ["2026-02-30", "09:00"], ["2026-07-31", "24:00"], ["2026-07-31", "09:60"]
   ]) {
-    assert.throws(() => utcDateTimeToUnix(date, time), /valid UTC date and time/);
+    assert.throws(() => houstonDateTimeToUnix(date, time), /valid Houston date and time/);
   }
-  assert.equal(utcDateTimeToUnix("0099-01-01", "00:00"), Date.parse("0099-01-01T00:00:00Z") / 1000);
 });
 
 test("Discord message formats announcement, date, rows, bold, and end", () => {
@@ -52,9 +76,9 @@ test("Discord message formats announcement, date, rows, bold, and end", () => {
       "@everyone THE WEEKEND BEGINS FR THIS TIME",
       "",
       "🚨SCHEDULE 7/31/26🚨",
-      "Daily Yap @ <t:1785488400:t>",
-      "**RE5 CO-OP WITH FRIENDS @ <t:1785501000:t>**",
-      "End @ <t:1785517200:t>"
+      `Daily Yap @ <t:${Date.parse("2026-07-31T14:00:00Z") / 1000}:t>`,
+      `**RE5 CO-OP WITH FRIENDS @ <t:${Date.parse("2026-07-31T17:30:00Z") / 1000}:t>**`,
+      `End @ <t:${Date.parse("2026-07-31T22:00:00Z") / 1000}:t>`
     ].join("\n")
   );
 });
@@ -68,7 +92,7 @@ test("optional episode numbers appear after event names and leave saved names in
     ...base,
     rows: [{ name: "Daily Yap", episode: "12", time: "09:00", bold: false }]
   };
-  assert.match(buildDiscordMessage(schedule), /Daily Yap Ep\. 12 @ <t:1785488400:t>/);
+  assert.match(buildDiscordMessage(schedule), /Daily Yap Ep\. 12 @ <t:1785506400:t>/);
   assert.equal(rememberEventName([], schedule.rows[0].name)[0], "Daily Yap");
 });
 
@@ -89,7 +113,7 @@ test("user Markdown is preserved while line breaks are safely flattened", () => 
     endTime: ""
   };
   assert.match(buildDiscordMessage(schedule), /^\*\*Big\*\* night\n\n/);
-  assert.match(buildDiscordMessage(schedule), /_Finale_ `run` @ <t:1785488400:t>$/);
+  assert.match(buildDiscordMessage(schedule), /_Finale_ `run` @ <t:1785506400:t>$/);
   assert.equal(cleanSingleLine("<script>\nalert(1)", 100), "<script> alert(1)");
 });
 

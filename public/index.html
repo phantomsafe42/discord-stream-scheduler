@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0d0f17">
-    <meta name="description" content="Build Discord stream schedules from UTC times.">
+    <meta name="description" content="Build Discord stream schedules from Houston local times.">
     <title>Discord Stream Schedule Builder</title>
     <link rel="stylesheet" href="./styles.css">
   </head>
@@ -14,9 +14,9 @@
         <p class="eyebrow">PRIVATE STREAM TOOL</p>
         <h1>Discord Stream<br> <span>Schedule Builder</span></h1>
       </div>
-      <div class="timezone-chip" title="Enter all schedule dates and times in UTC">
+      <div class="timezone-chip" title="Enter Houston local time (Central Daylight or Standard Time)">
         <span class="live-dot" aria-hidden="true"></span>
-        UTC
+        Houston (CT)
       </div>
     </header>
 
@@ -40,10 +40,12 @@
             <input id="announcement" maxlength="240" autocomplete="off">
           </label>
           <label class="field date-field">
-            <span>Schedule date (UTC)</span>
+            <span>Schedule date (Houston)</span>
             <input id="schedule-date" type="date" required>
           </label>
         </div>
+
+        <p class="timezone-note">Enter Houston local times. Discord will display them in each viewer’s timezone.</p>
 
         <label class="everyone-toggle">
           <input id="include-everyone" type="checkbox" checked>
@@ -52,14 +54,14 @@
         </label>
 
         <div class="row-labels" aria-hidden="true">
-          <span class="event-header"><span>Event</span><span>Ep. #</span></span><span>UTC start</span><span>Bold</span><span></span>
+          <span class="event-header"><span>Event</span><span>Ep. #</span></span><span>Houston start</span><span>Bold</span><span></span>
         </div>
         <div id="schedule-rows" class="schedule-rows"></div>
 
         <div class="row-footer">
           <button type="button" id="add-row" class="button add-button"><span aria-hidden="true">＋</span> Add event</button>
           <label class="field end-field">
-            <span>Optional end time (UTC)</span>
+            <span>Optional end time (Houston)</span>
             <input id="end-time" type="time">
           </label>
         </div>
@@ -72,7 +74,7 @@
           <div class="section-heading">
             <div>
               <p class="step">02 / CHECK</p>
-              <h2>UTC rundown</h2>
+              <h2>Houston rundown</h2>
             </div>
             <span id="event-count" class="count-chip">0 events</span>
           </div>
@@ -114,7 +116,7 @@
           </label>
         </div>
         <label class="field row-time">
-          <span class="mobile-label">UTC start</span>
+          <span class="mobile-label">Houston start</span>
           <input class="event-time" type="time">
         </label>
         <label class="bold-toggle" title="Bold this line">

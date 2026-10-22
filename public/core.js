@@ -1,32 +1,65 @@
-export const TIME_ZONE = "UTC";
+export const TIME_ZONE = "America/Chicago";
 export const MAX_ROWS = 20;
 export const MAX_MESSAGE_LENGTH = 2000;
 export const MAX_EVENT_LENGTH = 100;
 export const MAX_ANNOUNCEMENT_LENGTH = 240;
 export const MAX_EVENT_NAME_HISTORY = 50;
 
-export function utcDateTimeToUnix(date, time) {
+const houstonFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23"
+});
+
+function houstonPartsAt(milliseconds) {
+  return Object.fromEntries(houstonFormatter.formatToParts(new Date(milliseconds))
+    .filter((part) => part.type !== "literal")
+    .map((part) => [part.type, Number(part.value)]));
+}
+
+export function houstonDateTimeToUnix(date, time) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
     throw new RangeError("Enter a valid date and time.");
   }
 
   const [year, month, day] = date.split("-").map(Number);
   const [hour, minute] = time.split(":").map(Number);
-  const instant = new Date(0);
-  instant.setUTCFullYear(year, month - 1, day);
-  instant.setUTCHours(hour, minute, 0, 0);
+  const naive = new Date(0);
+  naive.setUTCFullYear(year, month - 1, day);
+  naive.setUTCHours(hour, minute, 0, 0);
   if (
-    instant.getUTCFullYear() !== year || instant.getUTCMonth() !== month - 1 ||
-    instant.getUTCDate() !== day || instant.getUTCHours() !== hour ||
-    instant.getUTCMinutes() !== minute
+    naive.getUTCFullYear() !== year || naive.getUTCMonth() !== month - 1 ||
+    naive.getUTCDate() !== day || naive.getUTCHours() !== hour ||
+    naive.getUTCMinutes() !== minute
   ) {
-    throw new RangeError("Enter a valid UTC date and time.");
+    throw new RangeError("Enter a valid Houston date and time.");
   }
-  return instant.getTime() / 1000;
+
+  const wanted = { year, month, day, hour, minute };
+  const matches = [];
+  for (let offsetMinutes = -14 * 60; offsetMinutes <= 14 * 60; offsetMinutes += 15) {
+    const candidate = naive.getTime() - offsetMinutes * 60_000;
+    const parts = houstonPartsAt(candidate);
+    if (["year", "month", "day", "hour", "minute"].every((key) => parts[key] === wanted[key])) {
+      matches.push(candidate);
+    }
+  }
+  if (!matches.length) {
+    throw new RangeError("That Houston time does not exist because of daylight saving time.");
+  }
+  return Math.min(...matches) / 1000;
 }
 
-export function tomorrowInUTC(now = new Date()) {
-  return new Date(now.getTime() + 86_400_000).toISOString().slice(0, 10);
+export function tomorrowInHouston(now = new Date()) {
+  const { year, month, day } = houstonPartsAt(now.getTime());
+  const today = new Date(0);
+  today.setUTCFullYear(year, month - 1, day);
+  today.setUTCHours(12, 0, 0, 0);
+  return new Date(today.getTime() + 86_400_000).toISOString().slice(0, 10);
 }
 
 export function formatScheduleDate(date) {
@@ -77,7 +110,7 @@ export function validateSchedule(schedule) {
       return;
     }
     try {
-      const timestamp = utcDateTimeToUnix(schedule.date, row.time);
+      const timestamp = houstonDateTimeToUnix(schedule.date, row.time);
       if (seenTimes.has(timestamp)) warnings.push(`${label} has a duplicate start time.`);
       if (previousTimestamp !== null && timestamp < previousTimestamp) {
         warnings.push(`${label} is out of chronological order.`);
@@ -91,7 +124,7 @@ export function validateSchedule(schedule) {
 
   if (schedule.endTime) {
     try {
-      const endTimestamp = utcDateTimeToUnix(schedule.date, schedule.endTime);
+      const endTimestamp = houstonDateTimeToUnix(schedule.date, schedule.endTime);
       if (seenTimes.has(endTimestamp)) warnings.push("End has a duplicate time.");
       if (previousTimestamp !== null && endTimestamp < previousTimestamp) {
         warnings.push("End is earlier than the final event.");
@@ -115,13 +148,13 @@ export function buildDiscordMessage(schedule) {
   for (const row of rows) {
     const name = formatEventName(row.name, row.episode);
     if (!name || !row.time) continue;
-    const timestamp = utcDateTimeToUnix(schedule.date, row.time);
+    const timestamp = houstonDateTimeToUnix(schedule.date, row.time);
     const line = `${name} @ <t:${timestamp}:t>`;
     lines.push(row.bold ? `**${line}**` : line);
   }
 
   if (schedule.endTime) {
-    const timestamp = utcDateTimeToUnix(schedule.date, schedule.endTime);
+    const timestamp = houstonDateTimeToUnix(schedule.date, schedule.endTime);
     lines.push(`End @ <t:${timestamp}:t>`);
   }
 

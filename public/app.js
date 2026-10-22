@@ -1,15 +1,17 @@
 import {
   MAX_ROWS,
+  TIME_ZONE,
   buildDiscordMessage,
   cleanSingleLine,
   formatEventName,
   rememberEventName,
-  utcDateTimeToUnix,
-  tomorrowInUTC,
+  houstonDateTimeToUnix,
+  tomorrowInHouston,
   validateSchedule
 } from "./core.js";
 
-const STORAGE_KEY = "discord-scheduler-template-utc-v1";
+const STORAGE_KEY = "discord-scheduler-template-houston-v1";
+const UTC_STORAGE_KEY = "discord-scheduler-template-utc-v1";
 const PACIFIC_STORAGE_KEY = "discord-scheduler-template-v1";
 const EVENT_NAMES_KEY = "discord-scheduler-event-names-v1";
 
@@ -118,10 +120,15 @@ function readSchedule() {
   };
 }
 
-function formatUTCTime(time) {
+function formatHoustonTime(date, time) {
   if (!time) return "—";
-  const [hour, minute] = time.split(":").map(Number);
-  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} UTC`;
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: TIME_ZONE, hour: "numeric", minute: "2-digit", timeZoneName: "short"
+    }).format(new Date(houstonDateTimeToUnix(date, time) * 1000));
+  } catch {
+    return time;
+  }
 }
 
 function updateAddState() {
@@ -157,7 +164,7 @@ function renderPreview(schedule) {
     item.className = "preview-item";
     const time = document.createElement("span");
     time.className = "preview-time";
-    time.textContent = formatUTCTime(entry.time);
+    time.textContent = formatHoustonTime(schedule.date, entry.time);
     const details = document.createElement("div");
     const name = document.createElement("span");
     name.className = "preview-name";
@@ -166,7 +173,7 @@ function renderPreview(schedule) {
     const timestamp = document.createElement("code");
     timestamp.className = "preview-stamp";
     try {
-      timestamp.textContent = `<t:${utcDateTimeToUnix(schedule.date, entry.time)}:t>`;
+      timestamp.textContent = `<t:${houstonDateTimeToUnix(schedule.date, entry.time)}:t>`;
     } catch (error) {
       timestamp.textContent = error.message;
     }
@@ -213,7 +220,7 @@ function render() {
 
 function applySchedule(schedule) {
   elements.announcement.value = cleanSingleLine(schedule.announcement, 240);
-  elements.date.value = /^\d{4}-\d{2}-\d{2}$/.test(schedule.date ?? "") ? schedule.date : tomorrowInUTC();
+  elements.date.value = /^\d{4}-\d{2}-\d{2}$/.test(schedule.date ?? "") ? schedule.date : tomorrowInHouston();
   elements.includeEveryone.checked = schedule.includeEveryone !== false;
   elements.endTime.value = /^\d{2}:\d{2}$/.test(schedule.endTime ?? "") ? schedule.endTime : "";
   elements.rows.replaceChildren();
@@ -246,12 +253,14 @@ elements.load.addEventListener("click", () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) {
-      showToast(localStorage.getItem(PACIFIC_STORAGE_KEY)
-        ? "Old Pacific template remains saved; re-enter its times in UTC."
-        : "No saved UTC template yet");
+      const oldZone = localStorage.getItem(UTC_STORAGE_KEY) ? "UTC"
+        : localStorage.getItem(PACIFIC_STORAGE_KEY) ? "Pacific" : "";
+      showToast(oldZone
+        ? `Old ${oldZone} template remains saved; re-enter its times in Houston time.`
+        : "No saved Houston template yet");
       return;
     }
-    applySchedule({ ...JSON.parse(saved), date: tomorrowInUTC() });
+    applySchedule({ ...JSON.parse(saved), date: tomorrowInHouston() });
     showToast("Template loaded for tomorrow");
   } catch {
     showToast("Saved template is invalid");
@@ -260,7 +269,7 @@ elements.load.addEventListener("click", () => {
 
 elements.clear.addEventListener("click", () => {
   if (!confirm("Clear the current schedule? Your saved template will stay available.")) return;
-  applySchedule({ announcement: "", date: tomorrowInUTC(), includeEveryone: false, rows: [{}], endTime: "" });
+  applySchedule({ announcement: "", date: tomorrowInHouston(), includeEveryone: false, rows: [{}], endTime: "" });
 });
 
 elements.copy.addEventListener("click", async () => {
@@ -310,7 +319,7 @@ async function checkWebhook() {
 populatePreviousNames();
 applySchedule({
   announcement: "",
-  date: tomorrowInUTC(),
+  date: tomorrowInHouston(),
   includeEveryone: false,
   rows: [{}],
   endTime: ""
