@@ -99,17 +99,14 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+    <datalist id="previous-event-names"></datalist>
+
     <template id="row-template">
       <div class="schedule-row">
-        <div class="field row-name">
+        <label class="field row-name">
           <span class="mobile-label">Event name</span>
-          <div class="event-name-controls">
-            <input class="event-name" maxlength="100" autocomplete="off" aria-label="Event name">
-            <select class="previous-event-names" aria-label="Previously entered event names">
-              <option value="">Previous names</option>
-            </select>
-          </div>
-        </div>
+          <input class="event-name" maxlength="100" autocomplete="off" aria-label="Event name" list="previous-event-names">
+        </label>
         <label class="field row-time">
           <span class="mobile-label">UTC start</span>
           <input class="event-time" type="time">

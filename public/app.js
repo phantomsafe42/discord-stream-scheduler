@@ -31,6 +31,7 @@ const elements = {
   post: document.querySelector("#post-discord"),
   webhookStatus: document.querySelector("#webhook-status"),
   toast: document.querySelector("#toast"),
+  previousNames: document.querySelector("#previous-event-names"),
   rowTemplate: document.querySelector("#row-template")
 };
 
@@ -49,10 +50,8 @@ function loadPreviousEventNames() {
   }
 }
 
-function populatePreviousNames(select) {
-  const prompt = new Option("Previous names", "");
-  select.replaceChildren(prompt, ...previousEventNames.map((name) => new Option(name, name)));
-  select.disabled = previousEventNames.length === 0;
+function populatePreviousNames() {
+  elements.previousNames.replaceChildren(...previousEventNames.map((name) => new Option(name, name)));
 }
 
 function rememberNames(values) {
@@ -65,7 +64,7 @@ function rememberNames(values) {
   } catch {
     // Names remain available for this session if browser storage is disabled.
   }
-  elements.rows.querySelectorAll(".previous-event-names").forEach(populatePreviousNames);
+  populatePreviousNames();
 }
 
 function showToast(message) {
@@ -83,17 +82,8 @@ function addRow(row = { name: "", time: "", bold: false }, focus = false) {
   const fragment = elements.rowTemplate.content.cloneNode(true);
   const node = fragment.querySelector(".schedule-row");
   const nameInput = node.querySelector(".event-name");
-  const previousNames = node.querySelector(".previous-event-names");
   nameInput.value = cleanSingleLine(row.name, 100);
-  populatePreviousNames(previousNames);
   nameInput.addEventListener("change", () => rememberNames([nameInput.value]));
-  previousNames.addEventListener("change", () => {
-    if (!previousNames.value) return;
-    nameInput.value = previousNames.value;
-    rememberNames([nameInput.value]);
-    render();
-    nameInput.focus();
-  });
   node.querySelector(".event-time").value = /^\d{2}:\d{2}$/.test(row.time ?? "") ? row.time : "";
   node.querySelector(".event-bold").checked = Boolean(row.bold);
   node.querySelector(".delete-row").addEventListener("click", () => {
@@ -306,6 +296,7 @@ async function checkWebhook() {
   render();
 }
 
+populatePreviousNames();
 applySchedule({
   announcement: "",
   date: tomorrowInUTC(),
