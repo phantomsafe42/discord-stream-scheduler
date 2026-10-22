@@ -101,10 +101,15 @@
 
     <template id="row-template">
       <div class="schedule-row">
-        <label class="field row-name">
+        <div class="field row-name">
           <span class="mobile-label">Event name</span>
-          <input class="event-name" maxlength="100" autocomplete="off">
-        </label>
+          <div class="event-name-controls">
+            <input class="event-name" maxlength="100" autocomplete="off" aria-label="Event name">
+            <select class="previous-event-names" aria-label="Previously entered event names">
+              <option value="">Previous names</option>
+            </select>
+          </div>
+        </div>
         <label class="field row-time">
           <span class="mobile-label">UTC start</span>
           <input class="event-time" type="time">

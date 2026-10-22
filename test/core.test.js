@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildDiscordMessage,
   cleanSingleLine,
+  rememberEventName,
   tomorrowInUTC,
   utcDateTimeToUnix,
   validateSchedule,
@@ -68,6 +69,16 @@ test("user Markdown is preserved while line breaks are safely flattened", () => 
   assert.match(buildDiscordMessage(schedule), /^\*\*Big\*\* night\n\n/);
   assert.match(buildDiscordMessage(schedule), /_Finale_ `run` @ <t:1785488400:t>$/);
   assert.equal(cleanSingleLine("<script>\nalert(1)", 100), "<script> alert(1)");
+});
+
+test("previous event names are cleaned, deduplicated, and bounded", () => {
+  const names = Array.from({ length: 50 }, (_, index) => `Event ${index}`);
+  const updated = rememberEventName(names, "  event 1\n");
+  assert.equal(updated[0], "event 1");
+  assert.equal(updated.length, 50);
+  assert.equal(updated.filter((name) => name.toLowerCase() === "event 1").length, 1);
+  assert.equal(rememberEventName(updated, "New event").includes("Event 49"), false);
+  assert.deepEqual(rememberEventName(updated, "  "), updated);
 });
 
 test("validation warns about missing, duplicate, and out-of-order rows", () => {

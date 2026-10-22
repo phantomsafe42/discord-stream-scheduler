@@ -2,6 +2,7 @@ import {
   MAX_ROWS,
   buildDiscordMessage,
   cleanSingleLine,
+  rememberEventName,
   utcDateTimeToUnix,
   tomorrowInUTC,
   validateSchedule
@@ -9,6 +10,7 @@ import {
 
 const STORAGE_KEY = "discord-scheduler-template-utc-v1";
 const PACIFIC_STORAGE_KEY = "discord-scheduler-template-v1";
+const EVENT_NAMES_KEY = "discord-scheduler-event-names-v1";
 
 const elements = {
   announcement: document.querySelector("#announcement"),
@@ -34,6 +36,37 @@ const elements = {
 
 let webhookConfigured = false;
 let toastTimer;
+let previousEventNames = loadPreviousEventNames();
+
+function loadPreviousEventNames() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(EVENT_NAMES_KEY) ?? "[]");
+    return Array.isArray(saved)
+      ? saved.filter((name) => typeof name === "string").reduceRight(rememberEventName, [])
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function populatePreviousNames(select) {
+  const prompt = new Option("Previous names", "");
+  select.replaceChildren(prompt, ...previousEventNames.map((name) => new Option(name, name)));
+  select.disabled = previousEventNames.length === 0;
+}
+
+function rememberNames(values) {
+  const updated = values.reduce(rememberEventName, previousEventNames);
+  if (updated.length === previousEventNames.length &&
+      updated.every((name, index) => name === previousEventNames[index])) return;
+  previousEventNames = updated;
+  try {
+    localStorage.setItem(EVENT_NAMES_KEY, JSON.stringify(previousEventNames));
+  } catch {
+    // Names remain available for this session if browser storage is disabled.
+  }
+  elements.rows.querySelectorAll(".previous-event-names").forEach(populatePreviousNames);
+}
 
 function showToast(message) {
   elements.toast.textContent = message;
@@ -49,7 +82,18 @@ function addRow(row = { name: "", time: "", bold: false }, focus = false) {
   }
   const fragment = elements.rowTemplate.content.cloneNode(true);
   const node = fragment.querySelector(".schedule-row");
-  node.querySelector(".event-name").value = cleanSingleLine(row.name, 100);
+  const nameInput = node.querySelector(".event-name");
+  const previousNames = node.querySelector(".previous-event-names");
+  nameInput.value = cleanSingleLine(row.name, 100);
+  populatePreviousNames(previousNames);
+  nameInput.addEventListener("change", () => rememberNames([nameInput.value]));
+  previousNames.addEventListener("change", () => {
+    if (!previousNames.value) return;
+    nameInput.value = previousNames.value;
+    rememberNames([nameInput.value]);
+    render();
+    nameInput.focus();
+  });
   node.querySelector(".event-time").value = /^\d{2}:\d{2}$/.test(row.time ?? "") ? row.time : "";
   node.querySelector(".event-bold").checked = Boolean(row.bold);
   node.querySelector(".delete-row").addEventListener("click", () => {
@@ -174,6 +218,7 @@ function applySchedule(schedule) {
   elements.rows.replaceChildren();
   const rows = Array.isArray(schedule.rows) && schedule.rows.length ? schedule.rows.slice(0, MAX_ROWS) : [{ name: "", time: "", bold: false }];
   rows.forEach((row) => addRow(row));
+  rememberNames(rows.map((row) => row.name));
   render();
 }
 
@@ -187,6 +232,7 @@ elements.add.addEventListener("click", () => {
 
 elements.save.addEventListener("click", () => {
   const { date: _date, ...template } = readSchedule();
+  rememberNames(template.rows.map((row) => row.name));
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(template));
     showToast("Template saved on this device");

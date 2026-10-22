@@ -3,6 +3,7 @@ export const MAX_ROWS = 20;
 export const MAX_MESSAGE_LENGTH = 2000;
 export const MAX_EVENT_LENGTH = 100;
 export const MAX_ANNOUNCEMENT_LENGTH = 240;
+export const MAX_EVENT_NAME_HISTORY = 50;
 
 export function utcDateTimeToUnix(date, time) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
@@ -39,6 +40,13 @@ export function cleanSingleLine(value, maxLength) {
     .replace(/\s{2,}/g, " ")
     .trim()
     .slice(0, maxLength);
+}
+
+export function rememberEventName(names, value) {
+  const name = cleanSingleLine(value, MAX_EVENT_LENGTH);
+  if (!name) return names;
+  return [name, ...names.filter((previous) => previous.toLocaleLowerCase() !== name.toLocaleLowerCase())]
+    .slice(0, MAX_EVENT_NAME_HISTORY);
 }
 
 export function validateSchedule(schedule) {
