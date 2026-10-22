@@ -28,14 +28,12 @@ body {
 }
 
 button,
-input,
-select { font: inherit; }
+input { font: inherit; }
 
 button { cursor: pointer; }
 
 button:focus-visible,
 input:focus-visible,
-select:focus-visible,
 pre:focus-visible {
   outline: 2px solid var(--accent-2);
   outline-offset: 2px;
@@ -181,8 +179,7 @@ main {
   font-weight: 600;
 }
 
-input,
-select {
+input {
   width: 100%;
   min-height: 42px;
   border: 1px solid var(--control-line);
@@ -191,19 +188,6 @@ select {
   color: var(--text);
   background: var(--bg);
 }
-
-.event-name-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px;
-  gap: 8px;
-}
-
-.previous-event-names {
-  padding-right: 4px;
-  font-size: 12px;
-}
-
-.previous-event-names:disabled { opacity: .55; }
 
 .everyone-toggle {
   display: flex;
@@ -466,7 +450,6 @@ pre {
   .section-heading { display: grid; }
   .template-actions { justify-content: flex-start; }
   .schedule-row { grid-template-columns: minmax(0, 1fr) 42px 42px; }
-  .event-name-controls { grid-template-columns: 1fr; }
   .row-time { grid-column: 1; }
   .row-footer { align-items: stretch; flex-direction: column-reverse; }
   .end-field,
