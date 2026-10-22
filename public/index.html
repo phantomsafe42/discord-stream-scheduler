@@ -52,7 +52,7 @@
         </label>
 
         <div class="row-labels" aria-hidden="true">
-          <span>Event</span><span>UTC start</span><span>Bold</span><span></span>
+          <span class="event-header"><span>Event</span><span>Ep. #</span></span><span>UTC start</span><span>Bold</span><span></span>
         </div>
         <div id="schedule-rows" class="schedule-rows"></div>
 
@@ -103,10 +103,16 @@
 
     <template id="row-template">
       <div class="schedule-row">
-        <label class="field row-name">
-          <span class="mobile-label">Event name</span>
-          <input class="event-name" maxlength="100" autocomplete="off" aria-label="Event name" list="previous-event-names">
-        </label>
+        <div class="event-fields">
+          <label class="field row-name">
+            <span class="mobile-label">Event name</span>
+            <input class="event-name" maxlength="100" autocomplete="off" aria-label="Event name" list="previous-event-names">
+          </label>
+          <label class="field episode-field">
+            <span class="mobile-label">Ep. #</span>
+            <input class="episode-number" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" aria-label="Episode number">
+          </label>
+        </div>
         <label class="field row-time">
           <span class="mobile-label">UTC start</span>
           <input class="event-time" type="time">

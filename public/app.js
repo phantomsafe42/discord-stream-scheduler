@@ -2,6 +2,7 @@ import {
   MAX_ROWS,
   buildDiscordMessage,
   cleanSingleLine,
+  formatEventName,
   rememberEventName,
   utcDateTimeToUnix,
   tomorrowInUTC,
@@ -74,7 +75,7 @@ function showToast(message) {
   toastTimer = setTimeout(() => elements.toast.classList.remove("show"), 2200);
 }
 
-function addRow(row = { name: "", time: "", bold: false }, focus = false) {
+function addRow(row = { name: "", episode: "", time: "", bold: false }, focus = false) {
   if (elements.rows.children.length >= MAX_ROWS) {
     showToast(`Maximum of ${MAX_ROWS} events reached`);
     return null;
@@ -84,6 +85,7 @@ function addRow(row = { name: "", time: "", bold: false }, focus = false) {
   const nameInput = node.querySelector(".event-name");
   nameInput.value = cleanSingleLine(row.name, 100);
   nameInput.addEventListener("change", () => rememberNames([nameInput.value]));
+  node.querySelector(".episode-number").value = String(row.episode ?? "").slice(0, 6);
   node.querySelector(".event-time").value = /^\d{2}:\d{2}$/.test(row.time ?? "") ? row.time : "";
   node.querySelector(".event-bold").checked = Boolean(row.bold);
   node.querySelector(".delete-row").addEventListener("click", () => {
@@ -108,6 +110,7 @@ function readSchedule() {
     includeEveryone: elements.includeEveryone.checked,
     rows: [...elements.rows.querySelectorAll(".schedule-row")].map((row) => ({
       name: row.querySelector(".event-name").value,
+      episode: row.querySelector(".episode-number").value,
       time: row.querySelector(".event-time").value,
       bold: row.querySelector(".event-bold").checked
     })),
@@ -131,7 +134,15 @@ function renderPreview(schedule) {
   elements.preview.replaceChildren();
   const validRows = schedule.rows.filter((row) => row.name && row.time);
   elements.count.textContent = `${validRows.length} event${validRows.length === 1 ? "" : "s"}`;
-  const entries = validRows.map((row) => ({ ...row, label: cleanSingleLine(row.name, 100) }));
+  const entries = validRows.map((row) => {
+    let label;
+    try {
+      label = formatEventName(row.name, row.episode);
+    } catch {
+      label = cleanSingleLine(row.name, 100);
+    }
+    return { ...row, label };
+  });
   if (schedule.endTime) entries.push({ label: "End", time: schedule.endTime, bold: false });
 
   if (!entries.length) {

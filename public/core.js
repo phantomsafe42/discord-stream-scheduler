@@ -49,6 +49,15 @@ export function rememberEventName(names, value) {
     .slice(0, MAX_EVENT_NAME_HISTORY);
 }
 
+export function formatEventName(name, episode) {
+  const eventName = cleanSingleLine(name, MAX_EVENT_LENGTH);
+  const number = String(episode ?? "").trim();
+  if (number && !/^\d+$/.test(number)) {
+    throw new RangeError("Episode number must be a non-negative whole number.");
+  }
+  return eventName && number ? `${eventName} Ep. ${number}` : eventName;
+}
+
 export function validateSchedule(schedule) {
   const warnings = [];
   const rows = Array.isArray(schedule.rows) ? schedule.rows.slice(0, MAX_ROWS) : [];
@@ -58,6 +67,11 @@ export function validateSchedule(schedule) {
   rows.forEach((row, index) => {
     const label = `Row ${index + 1}`;
     if (!cleanSingleLine(row.name, MAX_EVENT_LENGTH)) warnings.push(`${label} is missing an event name.`);
+    try {
+      formatEventName(row.name, row.episode);
+    } catch (error) {
+      warnings.push(`${label}: ${error.message}`);
+    }
     if (!row.time) {
       warnings.push(`${label} is missing a start time.`);
       return;
@@ -99,7 +113,7 @@ export function buildDiscordMessage(schedule) {
 
   const rows = (Array.isArray(schedule.rows) ? schedule.rows : []).slice(0, MAX_ROWS);
   for (const row of rows) {
-    const name = cleanSingleLine(row.name, MAX_EVENT_LENGTH);
+    const name = formatEventName(row.name, row.episode);
     if (!name || !row.time) continue;
     const timestamp = utcDateTimeToUnix(schedule.date, row.time);
     const line = `${name} @ <t:${timestamp}:t>`;
