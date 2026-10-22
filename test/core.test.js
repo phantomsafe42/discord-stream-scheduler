@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildDiscordMessage,
   cleanSingleLine,
+  formatEventName,
   rememberEventName,
   tomorrowInUTC,
   utcDateTimeToUnix,
@@ -56,6 +57,27 @@ test("Discord message formats announcement, date, rows, bold, and end", () => {
       "End @ <t:1785517200:t>"
     ].join("\n")
   );
+});
+
+test("optional episode numbers appear after event names and leave saved names intact", () => {
+  assert.equal(formatEventName("Daily Yap", "12"), "Daily Yap Ep. 12");
+  assert.equal(formatEventName("Daily Yap", ""), "Daily Yap");
+  assert.equal(formatEventName("Daily Yap", "0"), "Daily Yap Ep. 0");
+  assert.equal(formatEventName("", "12"), "");
+  const schedule = {
+    ...base,
+    rows: [{ name: "Daily Yap", episode: "12", time: "09:00", bold: false }]
+  };
+  assert.match(buildDiscordMessage(schedule), /Daily Yap Ep\. 12 @ <t:1785488400:t>/);
+  assert.equal(rememberEventName([], schedule.rows[0].name)[0], "Daily Yap");
+});
+
+test("invalid episode numbers produce a warning and cannot be formatted", () => {
+  for (const episode of ["-1", "1.5", "abc", "1e3"]) {
+    const schedule = { ...base, rows: [{ name: "Daily Yap", episode, time: "09:00" }] };
+    assert.ok(validateSchedule(schedule).some((warning) => warning.includes("Episode number")));
+    assert.throws(() => buildDiscordMessage(schedule), /Episode number/);
+  }
 });
 
 test("user Markdown is preserved while line breaks are safely flattened", () => {

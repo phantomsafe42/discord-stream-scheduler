@@ -257,6 +257,14 @@ input:focus-visible + .check-ui {
 .row-labels { padding: 0 10px 7px; }
 .schedule-rows { display: grid; gap: 8px; }
 
+.event-fields,
+.event-header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px;
+  gap: 8px;
+}
+
 .schedule-row {
   padding: 10px;
   border: 1px solid var(--line);
@@ -440,7 +448,7 @@ pre {
     padding: 10px;
   }
 
-  .row-name { grid-column: 1 / -1; }
+  .event-fields { grid-column: 1 / -1; }
   .mobile-label { display: block; }
   .delete-row { width: 42px; height: 42px; }
   .end-field { width: 145px; }
